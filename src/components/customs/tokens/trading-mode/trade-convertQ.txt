@@ -1,0 +1,359 @@
+"use client"
+
+
+
+import { useState, useEffect } from "react"
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
+import { SiSolana } from "react-icons/si"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {performSwap} from "@/lib/performSwap"
+
+
+
+interface TradingControlsProps {
+    balance?: number;
+    //currentPrice?: number;
+    tokenMint: string;
+    onExecuteTrade?: (data: TradeData) => Promise<boolean>;
+    isLoading?: boolean;
+}
+
+export interface TradeData {
+    type: "buy" | "sell";
+    orderType: "market" | "limit";
+    amount: number;
+    limitPrice?: number;
+}
+
+export default function TradingControls({
+    balance = 0, 
+    //currentPrice = 0,
+    onExecuteTrade,
+    tokenMint  ,
+    isLoading = false
+}: TradingControlsProps) {
+    // State management
+    const [type, setType] = useState<"buy" | "sell">("buy")
+    const [orderType, setOrderType] = useState<"market" | "limit">("market");
+    const [amount, setAmount] = useState("")
+    const [limitPrice, setLimitPrice] = useState("")
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    
+    const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { publicKey, connected, connecting } = useWallet();
+  const [solbalance, setSolbalance] = useState<number | null>(null);
+const [currentPrice, setCurrentPrice] = useState<number>(0);
+
+
+
+
+useEffect(() => {
+    const fetchTokenPrice = async () => {
+        try {
+            if (!tokenMint) return;
+
+            const res = await fetch(`https://lite-api.jup.ag/price/v3?ids=${tokenMint}`);
+            const data = await res.json();
+
+            const tokenData = data[tokenMint];
+            if (!tokenData || !tokenData.usdPrice) {
+                console.warn("Price not found for token:", tokenMint);
+                return;
+            }
+
+            const usdPrice = tokenData.usdPrice;
+            setCurrentPrice(usdPrice); // token price in USD
+        } catch (error) {
+            console.error("Error fetching token price:", error);
+        }
+    };
+
+    fetchTokenPrice();
+}, [tokenMint]);
+
+
+
+
+
+
+  // Set your RPC endpoint here
+  const connection = new Connection("https://mainnet.helius-rpc.com/?api-key=77aae9b3-ad37-4523-8caf-dea409d5519e");
+
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (publicKey) {
+        try {
+          const lamports = await connection.getBalance(publicKey);
+          setSolbalance(lamports / LAMPORTS_PER_SOL);
+        } catch (err) {
+          console.error("Failed to fetch balance:", err);
+          setSolbalance(null);
+        }
+      }
+    };
+
+    if (connected && publicKey) {
+      fetchBalance();
+    } else {
+      setSolbalance(null);
+    }
+  }, [connected, publicKey]);
+
+
+
+
+    useEffect(() => {
+        if (orderType === "market") {
+            setLimitPrice("")
+        } else if (orderType === "limit" && !limitPrice) {
+            setLimitPrice(currentPrice.toString())
+        }
+    }, [orderType, limitPrice, currentPrice])
+
+    const maxAmount = type === "buy"
+        ? balance / (orderType === "market" ? currentPrice : parseFloat(limitPrice) || currentPrice)
+        : balance
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+
+        if (/^(\d*\.?\d*)$/.test(value) || value === "") {
+            setAmount(value)
+            setError(null)
+        }
+    }
+
+    const handleLimitPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        if (/^(\d*\.?\d*)$/.test(value) || value === "") {
+            setLimitPrice(value)
+            setError(null)
+        }
+    }
+
+    const handleQuickAmount = (percentage: number) => {
+        const calculatedAmount = (maxAmount * percentage).toFixed(2)
+        setAmount(calculatedAmount)
+        setError(null)
+    }
+
+
+
+    const inputAmountLamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL); // SOL input
+
+
+
+const handleExecuteTrade = async () => {
+    const inputMint = type === "buy"
+  ? "So11111111111111111111111111111111111111112" // SOL for buy
+  : tokenMint; // token for sell
+
+const outputMint = type === "buy"
+  ? tokenMint // token
+  : "So11111111111111111111111111111111111111112"; // SOL
+
+try {
+  setIsSubmitting(true)
+
+  if (!publicKey) {
+  setError("Wallet not connected");
+  return;
+}
+
+const result = await performSwap({
+  inputMint,
+  outputMint,
+  amount: inputAmountLamports,
+  slippageBps: 50,
+  publicKey, // now guaranteed to be a PublicKey
+  signTransaction: async (tx) => await (window as any).solana.signTransaction(tx),
+  connection,
+});
+
+  
+
+  if (result.success) {
+    toast.success("Trade executed successfully!")
+    setAmount("")
+    setLimitPrice("")
+  } else {
+    setError(`Trade failed: ${result.error}`)
+  }
+
+} catch (err: any) {
+  setError("Error during trade execution")
+  console.error(err)
+} finally {
+  setIsSubmitting(false)
+}
+}
+
+    return (
+        <div className="flex flex-col max-w-full md:max-w-xl lg:max-w-full w-full relative z-10 top-0 sm:p-4 xl:max-w-md">
+            {/* Trade type tabs */}
+            <Tabs
+                defaultValue="buy"
+                value={type}
+                onValueChange={(value) => setType(value as "buy" | "sell")}
+                className="w-full"
+            >
+                <TabsList className="grid grid-cols-2 w-full h-auto py-2 gap-2">
+                    <TabsTrigger
+                        value="buy"
+                        className={cn(
+                            "data-[state=active]:text-white text-white py-2 border border-[#00BC45]",
+                            type === "buy" && "data-[state=active]:bg-[#00BC45]/50 border border-[#00BC45] data-[state=active]:shadow-none"
+                        )}
+                    >
+                        Buy
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="sell"
+                        className={cn(
+                            "data-[state=active]:text-white text-white py-2 border border-rose-600",
+                            type === "sell" && "data-[state=active]:bg-rose-600 data-[state=active]:shadow-none"
+                        )}
+                    >
+                        Sell
+                    </TabsTrigger>
+                </TabsList>
+            </Tabs>
+
+            {/* Order type selection */}
+            <div className="mt-4 mb-2">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="w-full justify-between border-white/20 bg-zinc-800/50 text-white"
+                        >
+                            {orderType === "market" ? "Market Order" : "Limit Order"}
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full min-w-[240px] bg-zinc-900 border-white/10">
+                        <DropdownMenuItem
+                            onClick={() => setOrderType("market")}
+                            className={cn("cursor-pointer text-white", orderType === "market" && "bg-zinc-800")}
+                        >
+                            Market Order
+                            {orderType === "market" && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => setOrderType("limit")}
+                            className={cn("cursor-pointer text-white", orderType === "limit" && "bg-zinc-800")}
+                        >
+                            Limit Order
+                            {orderType === "limit" && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
+            {/* Current price display */}
+            <div className="flex justify-between text-sm text-zinc-400 mb-1 px-1">
+                <span>Current Price</span>
+                <span className="font-medium text-white"> {currentPrice > 0 ? `$${currentPrice}` : "Loading..."}</span>
+            </div>
+
+            {/* Amount input */}
+            <div className="space-y-3">
+                <div className="relative">
+                    <Input
+                        type="text"
+                        value={amount}
+                        onChange={handleAmountChange}
+                        className="pl-3 pr-16 py-5 bg-zinc-800/50 border-white/20 rounded-full text-white placeholder:text-zinc-500"
+                        placeholder="Enter amount"
+                    />
+                    <div className="absolute inset-y-0 right-3 flex items-center">
+                        <div className="flex items-center gap-1.5 text-white">
+                            <SiSolana className="h-4 w-4" />
+                            <span>SOL</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Limit price input (only shown for limit orders) */}
+                {orderType === "limit" && (
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            value={limitPrice}
+                            onChange={handleLimitPriceChange}
+                            className="pl-3 pr-16 py-6 bg-zinc-800/50 border-white/20 rounded-lg text-white placeholder:text-zinc-500"
+                            placeholder="Limit price"
+                        />
+                        <div className="absolute inset-y-0 right-3 flex items-center">
+                            <span className="text-white">USD</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Quick amount buttons */}
+            <div className="flex justify-between mt-3 mb-4">
+                {[0.25, 0.5, 0.75, 1].map((value) => (
+                    <Button
+                        key={value}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickAmount(value)}
+                        className="border-white/20 bg-zinc-800/50 rounded-full hover:bg-zinc-700/50 text-white"
+                    >
+                        {value * 100}%
+                    </Button>
+                ))}
+            </div>
+
+            {/* Balance display */}
+            <div className="flex justify-between text-sm text-zinc-400 mb-3 px-1">
+                <span>Available Balance</span>
+                <div className="flex items-center gap-1.5 text-white">
+                    <span>{solbalance !== null ? `${solbalance.toFixed(4)} SOL` : "—"}</span>
+                    <SiSolana className="h-3.5 w-3.5" />
+                </div>
+            </div>
+
+            {/* Error message */}
+            {error && (
+                <div className="text-rose-500 text-sm mb-3 px-1">
+                    {error}
+                </div>
+            )}
+
+            {/* Execute trade button */}
+            <Button
+                onClick={handleExecuteTrade}
+                disabled={isSubmitting || isLoading || !amount}
+                className={cn(
+                    "py-6 font-medium text-white",
+                    type === "buy"
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-rose-600 hover:bg-rose-700"
+                )}
+            >
+                {isSubmitting || isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {type === "buy" ? "Buy" : "Sell"} SOL
+                {orderType === "limit" ? " (Limit)" : ""}
+            </Button>
+        </div>
+    )
+}

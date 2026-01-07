@@ -1,0 +1,103 @@
+"use client";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import Logo from "@public/icons/Logo.png";
+import Image from "next/image";
+import { Input } from "../../ui/input";
+import { Button } from "../../ui/button";
+import wallet_icon from "@public/icons/wallet.svg";
+import Link from "next/link";
+import { Search, SearchIcon, User } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { Connection } from "@solana/web3.js";
+import { usePathname } from "next/navigation";
+
+export default function Header() {
+    const [isScrolled, setIsScrolled] = useState(false);
+    const pathname = usePathname();
+    const connection = new Connection(
+        "https://api.devnet.solana.com",
+        "confirmed"
+    );
+
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 0);
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    return (
+        <header
+            className={`sticky top-0 right-0 z-20 md:mt-8 flex py-4 min-h-16 shrink-0 items-center gap-2 transition-all w-full mx-auto duration-75 ease-linear 
+            ${isScrolled
+                    ? "bg-[#0A0A0A] text-white shadow-md"
+                    : "bg-transparent"
+                }`}
+        >
+            <div className="flex items-center justify-between w-full 2xl:max-w-[97%] mx-auto">
+                <div className="flex items-center gap-2">
+                    <SidebarTrigger className="-ml-4 cursor-pointer sm:hidden" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+
+                    <div className={"relative hidden xl:flex"}>
+                        <Input placeholder="Search"
+                            className={`min-w-2xs urbanist active:ring-0 ring-0 outline-0 w-full py-5 placeholder:font-light bg-transparent px-3 text-white placeholder:text-white border border-white/25 ${pathname.startsWith('/dev') ?
+                                'focus:border-[#FFEA00]' : pathname.startsWith('/landing') ? 'focus:border-[#7619BC]' : ''}`} />
+                        <span className="absolute top-2 right-2">
+                            <Search size={22} color="white" />
+                        </span>
+                    </div>
+                </div>
+
+                <div className="hidden lg:flex">
+                    <Image
+                        src={Logo}
+                        alt="Logo"
+                        fetchPriority="high"
+                        className="h-7 w-7 xl:h-10 xl:w-10"
+                    />
+                </div>
+
+                <div className="flex flex-row items-center gap-5">
+               
+                    <Button
+                        size={"icon"}
+                        className="bg-transparent border border-white/50 h-10 w-10 text-white rounded-full xl:hidden"
+                    >
+                        <SearchIcon size={30} />
+                    </Button>
+                    <Link href={"/landing/wallet"}>
+                        <Button
+                            onClick={() => { }}
+                            className="flex items-center flex-row gap-2 cursor-pointer rounded-md px-3 md:px-4 bg-transparent border border-[#F5F5F5]/25 text-white"
+                        >
+                            <span className="hidden font-light xl:flex">
+                                Connect Your wallet{" "}
+                            </span>
+                            <Image
+                                src={wallet_icon}
+                                fetchPriority="high"
+                                alt={"wallet icon"}
+                                className="h-5 w-5 object-contain"
+                            />
+                        </Button>
+                    </Link>
+
+                    <Button
+                        size={"icon"}
+                        className="bg-white/10 border border-[#F5F5F5]/25 h-10 w-10 text-white rounded-full"
+                    >
+                        <User size={60} className="h-9 w-9" />
+                    </Button>
+                    <WalletMultiButton />
+                </div>
+            </div>
+        </header>
+    );
+}

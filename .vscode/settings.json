@@ -1,0 +1,4 @@
+{
+    "editor.inlineSuggest.triggerCommandOnProviderChange": true,
+    "editor.quickSuggestionsDelay": 20
+}

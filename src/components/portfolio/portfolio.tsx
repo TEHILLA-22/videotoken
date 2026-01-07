@@ -1,0 +1,205 @@
+"use client";
+
+import React, { memo, useState, useRef } from 'react';
+import { BadgeCheckIcon } from 'lucide-react'
+
+const MOCK_STATS = {
+  totalPnl: "34,188.10",
+  percentage: "51.1",
+  wins: 80,
+  winAmount: "20,889",
+  losses: 45,
+  lossAmount: "8,932",
+  biggestWin: "2,500",
+  biggestLoss: "790",
+  winRate: "69%",
+  trades: 128,
+  totalProfit: "+$12,587",
+};
+
+const PortfolioStats = memo(({ stats }: { stats: typeof MOCK_STATS }) => (
+  <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
+      <h3 className="text-white text-lg font-bold">Performance</h3>
+      
+      <div className="flex gap-2 bg-[#121212] p-1 rounded-lg w-fit border border-gray-800">
+        {['1D', '7D', '1W', '1M', '3M'].map((period) => (
+          <button 
+            key={period} 
+            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${period === '1D' ? 'bg-white text-black' : 'text-gray-500 hover:text-white'}`}
+          >
+            {period}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-3 gap-4 border-b border-gray-800 pb-6">
+      <div>
+        <p className="text-[10px] text-gray-500 uppercase font-bold">Total PnL</p>
+        <p className="text-green-500 text-sm font-bold">{stats.totalProfit}</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-gray-500 uppercase font-bold">Winrate</p>
+        <p className="text-white text-sm font-bold">{stats.winRate}</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-gray-500 uppercase font-bold">Trades</p>
+        <p className="text-white text-sm font-bold">{stats.trades}</p>
+      </div>
+    </div>
+
+    <div className="flex justify-between items-end">
+      <div>
+        <p className="text-2xl font-bold text-white tracking-tight">${stats.totalPnl}</p>
+        <p className="text-green-500 text-sm font-bold inline-flex items-center gap-1">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L9 5M5 1L1 5M5 1V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {stats.percentage}%
+        </p>
+      </div>
+      <div className="h-12 w-32">
+        <svg viewBox="0 0 100 40" className="w-full h-full stroke-blue-500 fill-none stroke-2">
+          <path d="M0 30 Q 15 35, 30 20 T 60 25 T 100 5" strokeLinecap="round" />
+        </svg>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-2 gap-8 pt-6 border-t border-gray-800">
+      <div>
+        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Wins</p>
+        <p className="text-green-400 font-mono text-sm font-bold">{stats.wins} <span className="text-gray-600">→</span> ${stats.winAmount}</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Losses</p>
+        <p className="text-red-400 font-mono text-sm font-bold">{stats.losses} <span className="text-gray-600">→</span> ${stats.lossAmount}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-2 text-gray-500 mt-4">
+      <BadgeCheckIcon className="w-4 h-4" />
+       <span className="text-xs font-bold uppercase tracking-widest">Verified Trader</span>
+    </div>
+  </div>
+));
+
+//start new section
+
+PortfolioStats.displayName = "PortfolioStats";
+
+const TokenRow = ({ token }: { token: any }) => (
+  <div className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-all cursor-pointer group border-b border-gray-900/50">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-16 rounded bg-gray-900 overflow-hidden relative border border-gray-800">
+        <img src={token.image} className="object-cover w-full h-full opacity-80" alt="" />
+      </div>
+      <div>
+        <h4 className="font-bold text-white group-hover:text-purple-400 transition-colors">{token.symbol} <span className="text-gray-600 font-normal text-xs ml-1">Solana</span></h4>
+        <p className="text-[10px] text-gray-500 font-mono">MC: ${token.marketCap} • 15s</p>
+        <div className="flex gap-2 mt-1 opacity-40 group-hover:opacity-100 transition-opacity">
+
+           <div className="w-3 h-3 bg-gray-600 rounded-full" />
+           <div className="w-3 h-3 bg-gray-600 rounded-full" />
+        </div>
+      </div>
+    </div>
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-4">
+        <p className="text-white font-mono text-sm">$0</p>
+        <button className="text-[10px] font-bold bg-[#1a1225] text-purple-500 border border-purple-900/50 px-3 py-1 rounded hover:bg-purple-600 hover:text-white transition-all uppercase">
+          Buy
+        </button>
+      </div>
+      <div className="flex gap-3 text-[10px] text-gray-600 font-bold uppercase">
+         <span>1.5k <span className="text-xs">👍</span></span>
+         <span>1.5k <span className="text-xs">👎</span></span>
+      </div>
+    </div>
+  </div>
+);
+
+export default function PortfolioPage() {
+  const [avatar, setAvatar] = useState("/api/placeholder/100/100");
+  const [cover, setCover] = useState("/api/placeholder/1200/400"); // Dedicated state for cover
+  
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[#000000] text-white">
+      {/* display cover photo.*/}
+      <div className="relative h-[280px] w-full group overflow-hidden bg-[#111]">
+        <img src={cover} className="w-full h-full object-cover" alt="Cover" />
+        <div 
+          onClick={() => coverInputRef.current?.click()}
+          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
+        >
+          <span className="text-xs font-bold uppercase border border-white p-2">Change Cover</span>
+        </div>
+        <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) setCover(URL.createObjectURL(file));
+        }} />
+      </div>
+
+      {/* PROFILE INFO HEADER */}
+      <div className="px-10 -mt-12 relative z-10 flex items-end justify-between">
+        <div className="flex items-end gap-6">
+          <div 
+            onClick={() => avatarInputRef.current?.click()}
+            className="w-32 h-32 rounded-full border-[6px] border-[#000] bg-gray-900 overflow-hidden shadow-2xl cursor-pointer group relative"
+          >
+            <img src={avatar} className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" alt="Profile" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
+               <span className="text-[10px] font-bold">EDIT</span>
+            </div>
+            <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setAvatar(URL.createObjectURL(file));
+            }} />
+          </div>
+          
+          <div className="pb-[-4]">
+            <h2 className="text-2xl font-bold tracking-tight">#The Bay Harbour Stifler</h2>
+            <p className="text-sm text-gray-500 font-medium">Followers: <span className="text-white">487</span></p>
+            <button className="mt-2 bg-[#222] hover:bg-[#333] text-white text-[10px] font-bold px-6 py-1.5 rounded transition-all uppercase">Follow</button>
+          </div>
+        </div>
+        <div className="pb-4 text-gray-500 text-sm font-bold italic">Rank: 1</div>
+      </div>
+
+      {/* MAIN CONTENT GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 p-10 mt-4">
+        
+        {/* LEFT COLUMN: PORTFOLIO */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          <div className="flex items-center justify-center py-2 border-b border-gray-800 mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Portfolio</span>
+          </div>
+          <div className="flex flex-col">
+            <TokenRow token={{symbol: 'SOL', marketCap: '711K', balance: '0', image: '/api/placeholder/150/200'}} />
+            <TokenRow token={{symbol: 'SOL', marketCap: '711K', balance: '0', image: '/api/placeholder/150/200'}} />
+            <TokenRow token={{symbol: 'SOL', marketCap: '711K', balance: '0', image: '/api/placeholder/150/200'}} />
+          </div>
+        </div>
+
+        {/* MIDDLE COLUMN: LAUNCH  */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+           <div className="flex items-center justify-center py-2 border-b border-gray-800 mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Launch Legacy</span>
+          </div>
+          <div className="h-64 border border-dashed border-gray-900 rounded-xl flex items-center justify-center text-gray-800">
+             <span className="text-[10px] font-bold uppercase">No launches yet</span>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: PERFORMANCE */}
+        <div className="lg:col-span-4">
+          <div className="sticky top-6">
+            <PortfolioStats stats={MOCK_STATS} />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

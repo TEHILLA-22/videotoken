@@ -1,0 +1,108 @@
+ ===========
+ ADD TOKEN SCRIPT DOCUMENTS
+ ===========
+
+
+
+ "use client";
+
+import React, { useState } from "react";
+
+interface AddTokenFormProps {
+  /** Your backend URL, e.g. http://localhost:3000 or https://api.yourapp.com */
+  apiUrl?: string;
+}
+
+export default function AddTokenForm({ apiUrl = "http://localhost:3000" }: AddTokenFormProps) {
+  const [mint, setMint] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+
+    if (!mint || !symbol || !name) {
+      setMessage("⚠️ Please fill in all fields");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${apiUrl}/add-token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mint, symbol, name }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`✅ Token added: ${data.token.name} (${data.token.symbol})`);
+        setMint("");
+        setSymbol("");
+        setName("");
+      } else {
+        setMessage(`❌ Error: ${data.error || "Unknown error"}`);
+      }
+    } catch (err: any) {
+      setMessage(`❌ Network error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto p-4 border rounded-lg shadow-md">
+      <h2 className="text-xl font-bold mb-4">Add Token</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium">Mint Address</label>
+          <input
+            type="text"
+            value={mint}
+            onChange={(e) => setMint(e.target.value)}
+            className="w-full p-2 border rounded"
+            placeholder="Enter token mint address"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Symbol</label>
+          <input
+            type="text"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="w-full p-2 border rounded"
+            placeholder="e.g. SOL"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-2 border rounded"
+            placeholder="e.g. Solana Token"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60"
+        >
+          {loading ? "Adding..." : "Add Token"}
+        </button>
+      </form>
+
+      {message && <p className="mt-4 text-sm">{message}</p>}
+    </div>
+  );
+}
